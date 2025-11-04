@@ -1,173 +1,216 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Contador de Palabras</title>
+<title>Analizador y Diario</title>
 <style>
   body {
-    background-color: #121212;
+    background-color: #1e1e1e;
     color: #e0e0e0;
-    font-family: "Segoe UI", sans-serif;
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
     padding: 20px;
   }
-  h1, h2 {
-    text-align: center;
-    color: #90caf9;
+
+  h2 {
+    color: #ffd369;
   }
-  .input-box {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-width: 600px;
-    margin: 0 auto 20px;
-    background: #1e1e1e;
-    padding: 20px;
-    border-radius: 10px;
-  }
-  textarea, input, select {
-    background: #2a2a2a;
-    color: #f0f0f0;
+
+  textarea {
+    width: 100%;
+    height: 80px;
+    background: #2c2c2c;
+    color: #fff;
     border: 1px solid #444;
-    border-radius: 5px;
-    padding: 10px;
+    border-radius: 8px;
+    padding: 8px;
+    resize: none;
   }
-  button {
-    background: #2196f3;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 10px;
+
+  input, select, button {
+    background: #2c2c2c;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-top: 6px;
+  }
+
+  button:hover {
+    background: #3c3c3c;
     cursor: pointer;
   }
-  button:hover {
-    background: #1976d2;
-  }
-  .result-section {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .result-box {
-    background: #1e1e1e;
-    padding: 15px;
+
+  section {
+    margin-bottom: 40px;
+    border: 1px solid #333;
+    padding: 20px;
     border-radius: 10px;
-    width: 350px;
-    overflow-y: auto;
-    max-height: 400px;
+    background-color: #252525;
   }
+
   table {
     width: 100%;
     border-collapse: collapse;
-    color: #f0f0f0;
+    margin-top: 10px;
   }
+
   th, td {
-    border-bottom: 1px solid #333;
-    padding: 5px 8px;
+    border: 1px solid #444;
+    padding: 6px;
     text-align: left;
   }
+
   th {
-    color: #90caf9;
+    background-color: #333;
   }
 </style>
 </head>
 <body>
 
-<h1>📘 Registro de Palabras</h1>
+<h1>🧩 Analizador de Palabras + Diario Personal</h1>
 
-<div class="input-box">
-  <label for="lugar">Lugar:</label>
+<!-- SECCIÓN 1: POR LUGAR -->
+<section>
+  <h2>🗂️ Analizador por Lugar</h2>
+  <label>Descripción:</label><br>
+  <textarea id="descripcion"></textarea><br>
+  <label>Fecha:</label>
+  <input type="date" id="fecha"><br>
+  <label>Lugar:</label>
   <select id="lugar">
-    <option value="Twitter">Redes Sociales</option>
-    <option value="tiktok">Escuela</option>
-    <option value="ig">Casa</option>
-    <option value="Otro">Otro</option>
-  </select>
+    <option value="Redes Sociales">Redes Sociales</option>
+    <option value="Escuela">Escuela</option>
+    <option value="Casa">Casa</option>
+    <option value="Trabajo">Trabajo</option>
+  </select><br>
+  <button onclick="guardarLugar()">Guardar</button>
 
-  <label for="descripcion">Descripción:</label>
-  <textarea id="descripcion" rows="4" placeholder="Escribe aquí tu texto..."></textarea>
+  <h3>📊 Resultados por Lugar</h3>
+  <div id="tablaLugares"></div>
+</section>
 
-  <label for="fecha">Fecha:</label>
-  <input type="date" id="fecha">
+<!-- SECCIÓN 2: DIARIO PERSONAL -->
+<section>
+  <h2>📔 Diario Personal</h2>
+  <label>Entrada:</label><br>
+  <textarea id="entradaDiario"></textarea><br>
+  <button onclick="guardarDiario()">Guardar Entrada</button>
+  <button onclick="analizarDiario()">Analizar Semana</button>
+  <button onclick="analizarGeneral()">Analizar General</button>
 
-  <button onclick="guardar()">Guardar</button>
-</div>
-
-<div class="result-section">
-  <div class="result-box">
-    <h2>Frecuencia por Lugar</h2>
-    <div id="frecuenciasPorLugar"></div>
-  </div>
-
-  <div class="result-box">
-    <h2>Frecuencia Total</h2>
-    <div id="frecuenciasTotales"></div>
-  </div>
-</div>
+  <div id="resultadoDiario"></div>
+</section>
 
 <script>
-const datos = {}; // { lugar: { palabra: [fechas...] } }
+  const conectores = ["y","e","de","la","el","los","las","que","a","en","un","una","por","para","con","se","del","al","lo","su","sus","es","no","sí","si","me","te","mi","tu","ya","muy","más","pero","o","u","como"];
 
-function guardar() {
-  const lugar = document.getElementById("lugar").value;
-  const descripcion = document.getElementById("descripcion").value.trim().toLowerCase();
-  const fecha = document.getElementById("fecha").value;
+  // --- SECCIÓN 1: POR LUGAR ---
+  let registros = JSON.parse(localStorage.getItem("registrosLugares") || "{}");
 
-  if (!descripcion || !fecha) {
-    alert("Por favor escribe una descripción y elige una fecha.");
-    return;
-  }
+  function guardarLugar() {
+    const desc = document.getElementById("descripcion").value.trim().toLowerCase();
+    const fecha = document.getElementById("fecha").value;
+    const lugar = document.getElementById("lugar").value;
 
-  const palabras = descripcion.split(/[\s,.!?;:()"\n\r]+/).filter(Boolean);
-
-  if (!datos[lugar]) datos[lugar] = {};
-
-  palabras.forEach(palabra => {
-    if (!datos[lugar][palabra]) datos[lugar][palabra] = [];
-    datos[lugar][palabra].push(fecha);
-  });
-
-  actualizarTablas();
-  document.getElementById("descripcion").value = "";
-}
-
-function actualizarTablas() {
-  const divLugar = document.getElementById("frecuenciasPorLugar");
-  const divTotal = document.getElementById("frecuenciasTotales");
-
-  divLugar.innerHTML = "";
-  divTotal.innerHTML = "";
-
-  // Frecuencia por lugar
-  for (const [lugar, palabras] of Object.entries(datos)) {
-    let html = `<h3>${lugar}</h3><table><tr><th>Palabra</th><th>Frecuencia</th><th>Fechas</th></tr>`;
-    for (const [palabra, fechas] of Object.entries(palabras)) {
-      html += `<tr><td>${palabra}</td><td>${fechas.length}</td><td>${fechas.join(", ")}</td></tr>`;
+    if (!desc || !fecha) {
+      alert("Por favor completa la descripción y la fecha.");
+      return;
     }
-    html += "</table><br>";
-    divLugar.innerHTML += html;
-  }
 
-  // Frecuencia total
-  const total = {};
-  for (const palabras of Object.values(datos)) {
-    for (const [palabra, fechas] of Object.entries(palabras)) {
-      if (!total[palabra]) total[palabra] = [];
-      total[palabra].push(...fechas);
+    if (!registros[lugar]) registros[lugar] = {};
+
+    const palabras = desc.split(/[\s,.\n\r!?;:()]+/).filter(p => p);
+    for (let p of palabras) {
+      if (!registros[lugar][p]) registros[lugar][p] = [];
+      registros[lugar][p].push(fecha);
     }
+
+    localStorage.setItem("registrosLugares", JSON.stringify(registros));
+    mostrarLugares();
+    document.getElementById("descripcion").value = "";
   }
 
-  let htmlTotal = "<table><tr><th>Palabra</th><th>Frecuencia Total</th><th>Fechas</th></tr>";
-  for (const [palabra, fechas] of Object.entries(total).sort()) {
-    htmlTotal += `<tr><td>${palabra}</td><td>${fechas.length}</td><td>${[...new Set(fechas)].join(", ")}</td></tr>`;
+  function mostrarLugares() {
+    let html = "";
+    for (let lugar in registros) {
+      html += `<h4>${lugar}</h4><table><tr><th>Palabra</th><th>Frecuencia</th><th>Fechas</th></tr>`;
+      for (let palabra in registros[lugar]) {
+        const fechas = registros[lugar][palabra];
+        html += `<tr><td>${palabra}</td><td>${fechas.length}</td><td>${fechas.join(", ")}</td></tr>`;
+      }
+      html += "</table>";
+    }
+    document.getElementById("tablaLugares").innerHTML = html;
   }
-  htmlTotal += "</table>";
 
-  divTotal.innerHTML = htmlTotal;
-}
+  mostrarLugares();
+
+  // --- SECCIÓN 2: DIARIO PERSONAL ---
+  let diario = JSON.parse(localStorage.getItem("diario") || "[]");
+
+  function guardarDiario() {
+    const texto = document.getElementById("entradaDiario").value.trim();
+    if (!texto) {
+      alert("Escribe algo en tu entrada del diario.");
+      return;
+    }
+
+    const entrada = {
+      texto: texto.toLowerCase(),
+      fecha: new Date().toISOString()
+    };
+
+    diario.push(entrada);
+    localStorage.setItem("diario", JSON.stringify(diario));
+    document.getElementById("entradaDiario").value = "";
+    alert("Entrada guardada.");
+  }
+
+  function analizarDiario() {
+    const hoy = new Date();
+    const haceUnaSemana = new Date(hoy);
+    haceUnaSemana.setDate(hoy.getDate() - 7);
+
+    const recientes = diario.filter(e => new Date(e.fecha) >= haceUnaSemana);
+    mostrarAnalisis(recientes, "📆 Análisis de la Semana");
+  }
+
+  function analizarGeneral() {
+    mostrarAnalisis(diario, "🌍 Análisis General del Diario");
+  }
+
+  function mostrarAnalisis(lista, titulo) {
+    if (lista.length === 0) {
+      document.getElementById("resultadoDiario").innerHTML = "<p>No hay suficientes entradas para analizar.</p>";
+      return;
+    }
+
+    const contador = {};
+    lista.forEach(e => {
+      e.texto.split(/[\s,.\n\r!?;:()]+/)
+        .filter(p => p && !conectores.includes(p))
+        .forEach(p => {
+          contador[p] = (contador[p] || 0) + 1;
+        });
+    });
+
+    const top = Object.entries(contador)
+      .sort((a,b) => b[1]-a[1])
+      .slice(0,10)
+      .map(([palabra, freq]) => `<tr><td>${palabra}</td><td>${freq}</td></tr>`)
+      .join("");
+
+    document.getElementById("resultadoDiario").innerHTML = `
+      <h3>${titulo}</h3>
+      <table>
+        <tr><th>Palabra</th><th>Frecuencia</th></tr>
+        ${top}
+      </table>
+    `;
+  }
 </script>
-
 </body>
 </html>
-
