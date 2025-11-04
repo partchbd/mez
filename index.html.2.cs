@@ -79,9 +79,9 @@
 <div class="input-box">
   <label for="lugar">Lugar:</label>
   <select id="lugar">
-    <option value="Redes Sociales">Redes Sociales</option>
-    <option value="Escuela">Escuela</option>
-    <option value="Casa">Casa</option>
+    <option value="Twitter">Redes Sociales</option>
+    <option value="tiktok">Escuela</option>
+    <option value="ig">Casa</option>
     <option value="Otro">Otro</option>
   </select>
 
